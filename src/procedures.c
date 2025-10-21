@@ -1523,6 +1523,10 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
         // Killed by being in lava
         strcpy((char *)recv_buffer + player_name_len, " tried to swim in lava");
         recv_buffer[player_name_len + 22] = '\0';
+      } else if (damage_type == D_explosion) {
+        // Killed by an explosion
+        strcpy((char *)recv_buffer + player_name_len, " blew up");
+        recv_buffer[player_name_len + 8] = '\0';
       } else if (attacker_id < -1) {
         // Killed by a mob
         strcpy((char *)recv_buffer + player_name_len, " was slain by a mob");
@@ -1715,16 +1719,12 @@ void handleServerTick (int64_t time_since_last_tick) {
       mob_data[i].type == 106 // Sheep
     );
 
-    uint8_t burns_in_sunlight = ( // Not all "undead" burn in sun
-      mob_data[i].type == 145 // Zombie
-    );
-
     // Mob "panic" timer, set to 3 after being hit
     // Currently has no effect on hostile mobs
     uint8_t panic = (mob_data[i].data >> 6) & 3;
 
-    // Burn hostile mobs if above ground during sunlight
-    if (burns_in_sunlight && (world_time < 13000 || world_time > 23460) && mob_data[i].y > 48) {
+    // Burn hostile burnable mobs if above ground during sunlight
+    if (mob_data[i].type == 145 && (world_time < 13000 || world_time > 23460) && mob_data[i].y > 48) {
       hurtEntity(entity_id, -1, D_on_fire, 2);
     }
 
@@ -1792,10 +1792,32 @@ void handleServerTick (int64_t time_since_last_tick) {
 
     } else { // Hostile mob movement handling
 
-      // If we're already next to the player, hurt them and skip movement
+      // If we're already next to the player, do an attack and skip movement
       if (closest_dist < 3 && abs(old_y - closest_player->y) < 2) {
-        hurtEntity(closest_player->client_fd, entity_id, D_generic, 6);
-        continue;
+        switch (mob_data[i].type) {
+          case 30: // Creeper
+            if (panic){
+              // Explode
+              placeCraterStructure(mob_data[i].x, mob_data[i].y + 1, mob_data[i].z, 3);
+              for (int j = 0; j < MAX_PLAYERS; j ++) {
+                if (player_data[j].client_fd == -1) continue;
+                uint16_t curr_dist = (
+                  abs(mob_data[i].x - player_data[j].x) +
+                  abs(mob_data[i].z - player_data[j].z)
+                );
+                // Attack every player in area of explosion
+                if (curr_dist <= 3) hurtEntity(player_data[j].client_fd, entity_id, D_explosion, 10);
+                // Broadcast creeper disappearance from all players
+                sc_removeEntity(player_data[j].client_fd, entity_id);
+              }
+              mob_data[i].type = 0;
+            } else {
+              mob_data[i].data += (1 << 6);
+            }
+            continue;
+          case 145: hurtEntity(closest_player->client_fd, entity_id, D_generic, 6); continue; // Zombie
+          default: continue;
+        }
       }
 
       // Move towards the closest player on 8 axis
