@@ -1574,6 +1574,7 @@ void hurtEntity (int entity_id, int attacker_id, uint8_t damage_type, uint8_t da
         switch (mob->type) {
           case 25: givePlayerItem(player, I_chicken, 1); break;
           case 28: givePlayerItem(player, I_beef, 1 + (fast_rand() % 3)); break;
+          case 30: givePlayerItem(player, I_gunpowder, (fast_rand() % 3)); break;
           case 95: givePlayerItem(player, I_porkchop, 1 + (fast_rand() % 3)); break;
           case 106: givePlayerItem(player, I_mutton, 1 + (fast_rand() & 1)); break;
           case 145: givePlayerItem(player, I_rotten_flesh, (fast_rand() % 3)); break;
@@ -1713,12 +1714,17 @@ void handleServerTick (int64_t time_since_last_tick) {
       mob_data[i].type == 95 || // Pig
       mob_data[i].type == 106 // Sheep
     );
+
+    uint8_t burns_in_sunlight = ( // Not all "undead" burn in sun
+      mob_data[i].type == 145 // Zombie
+    );
+
     // Mob "panic" timer, set to 3 after being hit
     // Currently has no effect on hostile mobs
     uint8_t panic = (mob_data[i].data >> 6) & 3;
 
     // Burn hostile mobs if above ground during sunlight
-    if (!passive && (world_time < 13000 || world_time > 23460) && mob_data[i].y > 48) {
+    if (burns_in_sunlight && (world_time < 13000 || world_time > 23460) && mob_data[i].y > 48) {
       hurtEntity(entity_id, -1, D_on_fire, 2);
     }
 
