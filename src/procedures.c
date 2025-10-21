@@ -1797,8 +1797,11 @@ void handleServerTick (int64_t time_since_last_tick) {
         switch (mob_data[i].type) {
           case 30: // Creeper
             if (panic){
-              // Explode
+              // Explode and deal damage
+              #ifdef MOB_GRIEFING
               placeCraterStructure(mob_data[i].x, mob_data[i].y + 1, mob_data[i].z, 3);
+              #endif
+
               for (int j = 0; j < MAX_PLAYERS; j ++) {
                 if (player_data[j].client_fd == -1) continue;
                 uint16_t curr_dist = (
