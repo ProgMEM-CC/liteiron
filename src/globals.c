@@ -37,11 +37,11 @@ uint32_t rng_seed = INITIAL_RNG_SEED;
 uint16_t world_time = 0;
 uint32_t server_ticks = 0;
 
-char motd[] = { "A bareiron server" };
+char motd[] = { "A lite server" };
 uint8_t motd_len = sizeof(motd) - 1;
 
 #ifdef SEND_BRAND
-  char brand[] = { "bareiron" };
+  char brand[] = { "liteiron" };
   uint8_t brand_len = sizeof(brand) - 1;
 #endif
 
